@@ -1,5 +1,12 @@
-// The data model for the entire app. Boilerplate — empty schema with no models.
-// Example branches add their own models, enums, and migrations here.
+// The data model for the entire app. A User (what the dev identity stub
+// scopes by), their Jobs, and an append-only JobEvent history. Minimal but
+// complete: every later feature deepens a table that already exists.
+//
+// Three promises every query keeps (see docs/specs/jobs/data-model.md):
+//   1. Every read and write is scoped by userId.
+//   2. Rows soft-delete via deletedAt; reads exclude deleted rows.
+//   3. A change that implies history writes its JobEvent in the same
+//      transaction as the change itself.
 
 generator client {
   provider        = "prisma-client-js"
@@ -11,4 +18,73 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String  @id @default(cuid())
+  name  String?
+  email String? @unique
+  jobs  Job[]
+}
+
+enum JobStatus {
+  APPLIED
+  INTERVIEWING
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+enum JobSource {
+  LINKEDIN
+  COMPANY_WEBSITE
+  REFERRAL
+  RECRUITER
+  JOB_BOARD
+  OTHER
+}
+
+model Job {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company      String
+  title        String
+  status       JobStatus  @default(APPLIED)
+  dateApplied  DateTime   @default(now())
+  followUpDate DateTime?
+  source       JobSource?
+  url          String?
+  location     String?
+  salaryMin    Int?
+  salaryMax    Int?
+  notes        String     @default("")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+  events       JobEvent[]
+
+  @@index([userId, deletedAt])
+  @@index([userId, dateApplied])
+  @@index([userId, status])
+}
+
+enum JobEventType {
+  CREATED
+  STATUS_CHANGE
+  NOTE_ADDED
+  RESTORED
+}
+
+model JobEvent {
+  id         String       @id @default(cuid())
+  jobId      String
+  job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type       JobEventType
+  fromStatus JobStatus?
+  toStatus   JobStatus?
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  @@index([jobId, createdAt])
 }

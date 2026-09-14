@@ -1,4 +1,9 @@
 // Web-only domain logic: input validation schemas and database queries.
-// Boilerplate — empty barrel. Example apps fill this with their own
-// schemas and query functions, following the web-only convention.
-export {};
+// The worker does not import from this package.
+export {
+  CreateJob,
+  type CreateJobInput,
+  JOB_STATUSES,
+  JOB_SOURCES,
+} from "./schemas/job";
+export { listJobs, getJob, createJob } from "./queries/jobs";
