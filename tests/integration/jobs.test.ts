@@ -12,7 +12,7 @@ beforeAll(async () => {
   const { prisma } = await import("@project/db");
   await prisma.user.create({ data: { id: "test-user", name: "Test User" } });
   await prisma.user.create({ data: { id: "other-user", name: "Somebody Else" } });
-}, 30000);
+}, 5000);
 
 describe("promise 3 — history rides the change", () => {
   it("creates a job WITH its CREATED event, transactionally", async () => {
