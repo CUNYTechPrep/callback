@@ -7,3 +7,5 @@ export {
   JOB_SOURCES,
 } from "./schemas/job";
 export { listJobs, getJob, createJob } from "./queries/jobs";
+// Re-exported so web can recognize validation errors without depending on zod.
+export { ZodError } from "zod";
