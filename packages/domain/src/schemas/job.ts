@@ -37,13 +37,15 @@ export const CreateJob = z
     company: z.string().trim().min(1, "Company is required").max(200),
     title: z.string().trim().min(1, "Title is required").max(200),
     status: z.enum(JOB_STATUSES).default("APPLIED"),
-    dateApplied: z.coerce.date(),
-    followUpDate: z.coerce.date().nullable(),
-    source: z.enum(JOB_SOURCES).nullable(),
-    url: z.string().url().max(2000).nullable(),
-    location: z.string().trim().max(200).nullable(),
-    salaryMin: z.number().int().nonnegative().nullable(),
-    salaryMax: z.number().int().nonnegative().nullable(),
+    dateApplied: z.coerce.date().default(() => new Date()),
+    // .nullable().default(null), not .optional(): the key is optional on input
+    // but the output stays `T | null`, which keeps CreateJobMatchesPrisma true.
+    followUpDate: z.coerce.date().nullable().default(null),
+    source: z.enum(JOB_SOURCES).nullable().default(null),
+    url: z.string().url().max(2000).nullable().default(null),
+    location: z.string().trim().max(200).nullable().default(null),
+    salaryMin: z.number().int().nonnegative().nullable().default(null),
+    salaryMax: z.number().int().nonnegative().nullable().default(null),
     notes: z.string().max(5000).optional().default(""),
   })
   .refine(

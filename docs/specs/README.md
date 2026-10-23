@@ -30,17 +30,13 @@ store issue state. See [CONTRIBUTING](../../CONTRIBUTING.md) for the full arc.
 | [deploy](deploy.md) | infrastructure | Container build + Azure topology, config via env only, kill-switches | 0008 |
 | [observability](observability.md) | infrastructure | Structured logs, request IDs, what gets measured | — |
 
-### Items domain (`items/`)
+### Jobs domain (`jobs/`)
 
 | Doc | Type | What it covers | Key ADRs |
 |---|---|---|---|
-| [list](items/list.md) | feature | List my items, scoped by user, excludes soft-deleted | 0009, 0003 |
-| [create](items/create.md) | feature | Create an item with Zod validation + CREATED event | 0009 |
-| [detail](items/detail.md) | feature | View item detail, ownership, lightbox | 0009 |
-| [attachment](items/attachment.md) | feature | Upload/download image, blob storage, MIME validation | 0006, 0008 |
-| [thumbnail](items/thumbnail.md) | feature | Worker thumbnail generation with sharp, queue pipeline | 0006, 0007, 0008 |
-| [live-progress](items/live-progress.md) | feature | SSE live progress for thumbnail pipeline, pg_notify fan-out | 0007, 0005 |
+| [data-model](jobs/data-model.md) | feature | `Job` + append-only `JobEvent`; scoping, soft delete, history in one transaction | 0009 |
+| [seed](jobs/seed.md) | feature | Believable demo data for `demo-user` | 0003 |
+| [list](jobs/list.md) | feature | `/jobs` lists my jobs; `/jobs/new` adds one with validation + `CREATED` event | 0009, 0003 |
 
 Feature specs live under `docs/specs/<domain>/`, grouped by the domain they
-describe. In this template repo the `items/` domain is a worked demonstration;
-an application built from this template keeps its own domains on `main`.
+describe.
