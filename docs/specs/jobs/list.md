@@ -54,8 +54,10 @@ makes the app a Job Tracker rather than a skeleton.
 
 ## Verify
 - `pnpm test:integration` — `tests/integration/jobs-create.test.ts` and
-  `jobs-action.test.ts` cover every Example above.
-- `pnpm dev` + `pnpm db:seed`, open `/jobs` — 10 seeded rows, newest first.
+  `jobs-action.test.ts` cover creation, validation, user isolation, ordering,
+  Server Action behavior, and error mapping.
+- `pnpm dev` + `pnpm --filter @project/migrate seed`, open `/jobs` — 10 seeded
+  rows, newest first.
 - `curl -s -H 'x-user-id: someone-else' localhost:3000/jobs | grep -i "no jobs"`
   — the empty state.
 - Keyboard-only pass on `/jobs/new`: tab through every field and submit with
