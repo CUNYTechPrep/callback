@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
 // The /jobs/new Server Action end to end against PGlite, with only Next's
-// navigation helpers and the identity stub mocked (docs/specs/jobs/list.md).
+// navigation helpers and the @project/auth seam mocked (docs/specs/jobs/list.md).
 
 const nav = vi.hoisted(() => ({
-  user: "action-user",
+  user: "action-user" as string | null, // null = signed out
   redirect: vi.fn((to: string) => {
     throw new Error(`REDIRECT ${to}`);
   }),
@@ -14,7 +14,16 @@ const nav = vi.hoisted(() => ({
 // not of the repo root, so their bare names don't resolve from here.
 vi.mock("../../apps/web/node_modules/next/navigation.js", () => ({ redirect: nav.redirect }));
 vi.mock("../../apps/web/node_modules/next/cache.js", () => ({ revalidatePath: nav.revalidatePath }));
-vi.mock("../../packages/auth/src/index.ts", () => ({ currentUserId: async () => nav.user }));
+vi.mock("../../packages/auth/src/index.ts", async () => {
+  const { UnauthenticatedError } = await import("../../packages/auth/src/errors");
+  return {
+    UnauthenticatedError,
+    currentUserId: async () => {
+      if (nav.user === null) throw new UnauthenticatedError();
+      return nav.user;
+    },
+  };
+});
 
 type Action = typeof import("../../apps/web/app/jobs/new/actions").createJobAction;
 let createJobAction: Action;
@@ -70,6 +79,21 @@ describe("createJobAction", () => {
       const state = await createJobAction(null, form({ company: "Acme", title: "SWE" }));
       expect(state?.error).toEqual({ code: "INTERNAL", message: "Something went wrong" });
       expect(nav.redirect).not.toHaveBeenCalled();
+    } finally {
+      nav.user = "action-user";
+    }
+  });
+
+  it("returns 401 UNAUTHENTICATED when signed out, writing nothing", async () => {
+    const { prisma } = await import("@project/db");
+    const before = await prisma.job.count();
+    nav.user = null;
+    try {
+      const state = await createJobAction(null, form({ company: "Ghost", title: "SWE" }));
+      expect(state?.error.code).toBe("UNAUTHENTICATED");
+      expect(await prisma.job.count()).toBe(before);
+      expect(nav.redirect).not.toHaveBeenCalled();
+      expect(nav.revalidatePath).not.toHaveBeenCalled();
     } finally {
       nav.user = "action-user";
     }

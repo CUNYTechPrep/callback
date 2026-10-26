@@ -1,16 +1,10 @@
-// Dev identity stub: reads the current user from request headers, env var,
-// or a fallback. Deliberately naive — replaced with real auth in Week 8.
-
-import { headers } from "next/headers";
-
-const FALLBACK = "demo-user";
+// The only source of identity: the database session behind the Auth.js cookie.
+// No header, env var, or fallback (docs/specs/auth/sign-in.md).
+import { auth } from "./auth";
+import { UnauthenticatedError } from "./errors";
 
 export async function currentUserId(): Promise<string> {
-  if (process.env.NODE_ENV === "production" && !process.env.ALLOW_DEV_IDENTITY) {
-    throw new Error(
-      "Dev identity stub is disabled in production. (Week 8 replaces this with real auth.)"
-    );
-  }
-  const h = await headers();
-  return h.get("x-user-id") ?? process.env.DEV_USER_ID ?? FALLBACK;
+  const session = await auth();
+  if (!session?.user?.id) throw new UnauthenticatedError();
+  return session.user.id;
 }

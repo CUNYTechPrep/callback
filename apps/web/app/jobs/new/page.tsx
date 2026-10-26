@@ -1,12 +1,14 @@
 // Add-a-job page (docs/specs/jobs/list.md).
 import Link from "next/link";
 import { JOB_STATUSES } from "@project/domain";
+import { requireUserId } from "../../../lib/require-user";
 import { NewJobForm } from "./form";
 
 // Dynamic so the date-applied default is today, not the build date.
 export const dynamic = "force-dynamic";
 
-export default function NewJobPage() {
+export default async function NewJobPage() {
+  await requireUserId("/jobs/new");
   return (
     <main className="space-y-6">
       <header>

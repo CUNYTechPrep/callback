@@ -34,7 +34,9 @@ Every route handler and Server Action, in order:
 
 - One error shape everywhere: `{ error: { code, message } }` with
   400 validation / 401 no session / 403 not permitted / 404 absent-or-foreign
-  / 409 conflict. Prisma mapped: P2002→409, P2025→404.
+  / 409 conflict. Prisma mapped: P2002→409, P2025→404. An
+  unauthenticated error maps to 401 `UNAUTHENTICATED`; a Server Action
+  returns that body, a route handler responds with it.
 - **Foreign resources return 404, not 403** — existence is not confirmed to
   non-owners.
 - Raw errors and stack traces never reach a client.
@@ -46,5 +48,5 @@ Every route handler and Server Action, in order:
 
 ## Key decisions
 
-- [ADR-0003](../adr/0003-dev-identity-stub.md) — identity stub + production guard.
+- [ADR-0012](../adr/0012-github-sessions-replace-dev-identity.md) — session-derived identity.
 - [ADR-0009](../adr/0009-domain-web-only.md) — schemas/queries live in `packages/domain`.
