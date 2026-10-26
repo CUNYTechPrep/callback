@@ -36,7 +36,9 @@ history per job. Stated once, here, so every other spec can lean on it.
   atomically; a crash between the two leaves neither.
 - Invalid input never reaches the database: `CreateJob` validates at the
   boundary (required non-empty company/title, enum status, URL shape,
-  `salaryMin ≤ salaryMax`, length caps).
+  `salaryMin ≤ salaryMax`, length caps). Only company and title are
+  required: `status` defaults to `APPLIED`, `dateApplied` to now, `notes` to
+  empty, and every other optional field to null.
 
 ## Examples
 

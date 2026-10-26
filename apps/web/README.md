@@ -2,23 +2,25 @@
 
 The user-facing web application. A Next.js server-rendered React app.
 
-**Boilerplate:** the home page shows a welcome message and a health-check link.
-Example branches add their own pages, API routes, and Client Components.
+The Job Tracker: a landing page, the signed-in user's job list, and a form to
+add a job (see `docs/specs/jobs/list.md`).
 
 ## Public surface
 
-All public routes are defined under `app/api/`:
+Pages live under `app/`, route handlers under `app/api/`:
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/` | GET | Home page — boilerplate welcome message |
+| `/` | GET | Landing page — links to the job list |
+| `/jobs` | GET | The current user's jobs, newest applied first |
+| `/jobs/new` | GET | Add-a-job form; submits via a Server Action |
 | `/api/health` | GET | Health check — is the process alive? Can it reach the DB? |
 
 ## Dependencies
 
 - `@project/db` — the Prisma client and generated types
 - `@project/services` — queue, storage, and notify adapters
-- `@project/domain` — Zod schemas and database queries (empty on main, populated on example branches)
+- `@project/domain` — Zod schemas and database queries
 - `@project/auth` — the `currentUserId()` dev identity stub
 - `@project/log` — pino logger
 
