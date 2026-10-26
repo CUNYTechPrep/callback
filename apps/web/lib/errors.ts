@@ -1,6 +1,7 @@
 // Maps anything thrown at the server boundary to the one error shape
 // ({ error: { code, message } }, see docs/specs/web.md). Unknown errors are
 // logged here and never reach the client.
+import { UnauthenticatedError } from "@project/auth";
 import { Prisma } from "@project/db";
 import { ZodError } from "@project/domain";
 import { log } from "@project/log";
@@ -8,6 +9,9 @@ import { log } from "@project/log";
 export type ErrorBody = { error: { code: string; message: string } };
 
 export function mapError(err: unknown): { status: number; body: ErrorBody } {
+  // Not logged: signed-out requests are normal traffic.
+  if (err instanceof UnauthenticatedError)
+    return { status: 401, body: { error: { code: "UNAUTHENTICATED", message: "Sign in to continue" } } };
   if (err instanceof ZodError)
     return { status: 400, body: { error: { code: "VALIDATION", message: err.issues[0]?.message ?? "Invalid input" } } };
   if (err instanceof Prisma.PrismaClientKnownRequestError) {

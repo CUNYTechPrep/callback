@@ -11,7 +11,7 @@ history per job. Stated once, here, so every other spec can lean on it.
 
 ## Where it lives
 - `packages/db/prisma/schema.prisma` — the models, enums, and indexes
-- `packages/db/prisma/migrations/0001_init.sql` — the schema as applied DDL
+- `packages/db/prisma/migrations/0001_init.sql`, `0002_auth.sql` — the schema as applied DDL
 - `packages/domain/src/schemas/job.ts` — boundary validation (`CreateJob`)
 - `packages/domain/src/queries/jobs.ts` — `listJobs`, `getJob`, `createJob`
 
@@ -57,9 +57,9 @@ history per job. Stated once, here, so every other spec can lean on it.
   `JobEvent`; the model is the demo.
 
 ## Constraints & decisions
-- **No auth tables yet.** Identity is the dev stub (`x-user-id` /
-  `DEV_USER_ID`) until real auth arrives; the schema stays silent about
-  sessions on purpose (see `docs/specs/auth.md`).
+- **Auth tables sit beside the job tables.** `Account`, `Session`, and
+  `VerificationToken` belong to Auth.js and exist for sign-in
+  (`docs/specs/auth/sign-in.md`); no job query reads them.
 - **`notes` is unbounded text** (capped at the boundary, not the column) —
   cheap now, revisited only if it ever hurts.
 - **No `[userId, followUpDate]` index.** No query reads by follow-up date

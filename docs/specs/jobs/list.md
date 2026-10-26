@@ -16,6 +16,7 @@ makes the app a Job Tracker rather than a skeleton.
   and its Server Action
 - `apps/web/lib/errors.ts` — maps thrown errors to the one error shape
 - `packages/domain/src/schemas/job.ts` — `CreateJob` validation
+- `apps/web/lib/require-user.ts` — signed-out redirect for the pages
 - `packages/domain/src/queries/jobs.ts` — `listJobs`, `createJob`
 
 ## Behavior
@@ -27,8 +28,11 @@ makes the app a Job Tracker rather than a skeleton.
   state whose primary action is that link. While loading it shows a skeleton;
   on failure it shows a retry card with a generic message — never the raw
   error text.
-- Jobs belonging to other users never appear; an unknown user sees the empty
-  state.
+- Jobs belonging to other users never appear; a signed-in user with no jobs
+  sees the empty state.
+- Signed out, `/jobs` and `/jobs/new` redirect to `/login`
+  ([auth/sign-in.md](../auth/sign-in.md)); the add action returns an
+  `UNAUTHENTICATED` error and writes nothing.
 - `/jobs/new` requires company and title. Status defaults to `APPLIED` and
   date applied defaults to today.
 - A valid submit writes the job and its `CREATED` event in one transaction,
@@ -45,8 +49,9 @@ makes the app a Job Tracker rather than a skeleton.
 
 | State / input | Behavior |
 |---|---|
-| seeded `demo-user` → `/jobs` | 10 rows, newest applied first |
-| `x-user-id: someone-else` → `/jobs` | empty state with "Add a job" |
+| seeded signed-in user → `/jobs` | 10 rows, newest applied first |
+| signed-in user with no jobs → `/jobs` | empty state with "Add a job" |
+| signed out → `/jobs` | redirect to `/login?callbackUrl=%2Fjobs` |
 | submit `{company:"Acme", title:"SWE"}` | job with status `APPLIED`, date applied today, one `CREATED` event; appears in the list |
 | submit `{company:"", title:"SWE"}` | 400 `VALIDATION`, field message on company, no row written |
 | user A creates a job | absent from user B's list |
@@ -56,10 +61,9 @@ makes the app a Job Tracker rather than a skeleton.
 - `pnpm test:integration` — `tests/integration/jobs-create.test.ts` and
   `jobs-action.test.ts` cover creation, validation, user isolation, ordering,
   Server Action behavior, and error mapping.
-- `pnpm dev` + `pnpm --filter @project/migrate seed`, open `/jobs` — 10 seeded
-  rows, newest first.
-- `curl -s -H 'x-user-id: someone-else' localhost:3000/jobs | grep -i "no jobs"`
-  — the empty state.
+- `pnpm dev`, sign in, then `pnpm db:seed`; open `/jobs` — 10 seeded rows,
+  newest first.
+- `curl -si localhost:3000/jobs | head -1` — 307 to `/login`.
 - Keyboard-only pass on `/jobs/new`: tab through every field and submit with
   Enter.
 
@@ -78,4 +82,4 @@ makes the app a Job Tracker rather than a skeleton.
   (does not exist yet).
 - Inline add from the list, and deeper async states (streamed sections,
   optimistic updates) — no spec owns these yet.
-- Real authentication — [auth.md](../auth.md).
+- Authentication — [auth/sign-in.md](../auth/sign-in.md).

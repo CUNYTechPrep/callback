@@ -22,7 +22,7 @@ production behavior diverge, controlled by configuration, not code branches.
 | Database (dev) | Local Postgres via `apps/db-server/` | Azure Postgres | `DATABASE_URL` |
 | Blob storage | Azurite | Azure Blob Storage | `AZURE_STORAGE_CONNECTION_STRING` |
 | Queue | Azurite | Azure Storage Queue | `AZURE_STORAGE_CONNECTION_STRING` |
-| Identity | Dev stub (`x-user-id` header, env fallback) | Real auth (OAuth, JWTs) | `ALLOW_DEV_IDENTITY` guard + package replacement |
+| Identity | GitHub OAuth app on `localhost:3000` | GitHub OAuth app on the real host | `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` (+ `AUTH_SECRET`) |
 
 ## Design intent
 
@@ -31,11 +31,12 @@ production behavior diverge, controlled by configuration, not code branches.
   which one the SDK connects to.
 - **Default to running.** Every seam works out of the box with zero cloud
   setup. `pnpm dev` starts the stand-ins (Postgres, Azurite).
-- **Safe by default.** The identity stub, and any other stand-in that could
-  be a security risk, throws in production unless explicitly overridden.
+- **Safe by default.** Identity has no stand-in: dev signs in like
+  production, and any other stand-in that could be a security risk throws in
+  production unless explicitly overridden.
 - **One env var per seam.** Azure Blob and Queue share
   `AZURE_STORAGE_CONNECTION_STRING`; the database has its own
-  (`DATABASE_URL`); identity has its own (`ALLOW_DEV_IDENTITY`). Each seam
+  (`DATABASE_URL`); identity has its own (`AUTH_GITHUB_ID`, with its secret pair). Each seam
   is a distinct env var away from production, and none requires more than
   one.
 
@@ -43,8 +44,9 @@ production behavior diverge, controlled by configuration, not code branches.
 
 - [ADR-0005](../adr/0005-pglite-tests.md) — PGlite as the test-database seam.
 - [ADR-0008](../adr/0008-azurite-seam.md) — Azurite as the blob/queue seam.
-- [ADR-0003](../adr/0003-dev-identity-stub.md) — the identity stub as the auth
-  seam.
+- [ADR-0012](../adr/0012-github-sessions-replace-dev-identity.md) — GitHub
+  database sessions as the auth seam; the OAuth app is the only thing that
+  changes between local and production.
 
 ## Adding a new seam
 

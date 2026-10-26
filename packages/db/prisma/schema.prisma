@@ -1,6 +1,9 @@
-// The data model for the entire app. A User (what the dev identity stub
-// scopes by), their Jobs, and an append-only JobEvent history. Minimal but
-// complete: every later feature deepens a table that already exists.
+// The data model for the entire app. A User (what every query scopes by, signed
+// in through GitHub via Auth.js), their Jobs, and an append-only JobEvent
+// history. Account, Session, and VerificationToken are the Auth.js Prisma
+// adapter's tables (docs/specs/auth/sign-in.md); their snake_case token fields
+// stay as the adapter writes them. Minimal but complete: every later feature
+// deepens a table that already exists.
 //
 // Three promises every query keeps (see docs/specs/jobs/data-model.md):
 //   1. Every read and write is scoped by userId.
@@ -21,10 +24,51 @@ datasource db {
 }
 
 model User {
-  id    String  @id @default(cuid())
-  name  String?
-  email String? @unique
-  jobs  Job[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  image         String?
+  emailVerified DateTime?
+  jobs          Job[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 enum JobStatus {

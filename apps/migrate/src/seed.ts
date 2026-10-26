@@ -1,6 +1,7 @@
-// Seeds the demo user and a believable job search: statuses across the
+// Seeds a believable job search for the signed-in user: statuses across the
 // pipeline, events spread over weeks, follow-ups due soon and overdue.
-// Idempotent by construction — run twice, same database.
+// Creates no User: it targets whoever owns the most recent unexpired Session,
+// so sign in first. Idempotent by construction — run twice, same database.
 // Standard recovery pair: `pnpm db:reset`, then `pnpm db:seed`.
 // Run via: pnpm db:seed  (see docs/specs/jobs/seed.md)
 
@@ -110,11 +111,16 @@ const SEARCH: SeedJob[] = [
 ];
 
 async function main() {
-  const user = await prisma.user.upsert({
-    where: { id: "demo-user" },
-    update: {},
-    create: { id: "demo-user", name: "Demo User", email: "demo@example.edu" },
+  const session = await prisma.session.findFirst({
+    where: { expires: { gt: new Date() } },
+    orderBy: { expires: "desc" },
+    select: { userId: true },
   });
+  if (!session) {
+    console.error("seed: no signed-in user — sign in at http://localhost:3000/login first");
+    process.exit(1);
+  }
+  const user = { id: session.userId };
 
   const existing = await prisma.job.count({ where: { userId: user.id } });
   if (existing > 0) {

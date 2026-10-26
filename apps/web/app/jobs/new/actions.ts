@@ -17,7 +17,13 @@ export type CreateState =
   | null;
 
 export async function createJobAction(_: CreateState, form: FormData): Promise<CreateState> {
-  const userId = await currentUserId();
+  // Identity first: a signed-out submit returns 401 UNAUTHENTICATED and writes nothing.
+  let userId: string;
+  try {
+    userId = await currentUserId();
+  } catch (e) {
+    return mapError(e).body;
+  }
   const values = {
     company: String(form.get("company") ?? ""),
     title: String(form.get("title") ?? ""),

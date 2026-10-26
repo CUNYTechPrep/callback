@@ -5,14 +5,11 @@ type: infrastructure
 
 Who the current user is, and how every server entry learns it.
 
-## Today: the dev identity stub
+## The contract: session-derived identity, only
 
-`packages/auth/` resolves the current user from the `x-user-id` header, then
-`DEV_USER_ID`, then a fallback — **deliberately naive**, and guarded: it throws
-in production unless `ALLOW_DEV_IDENTITY` is set. This is the auth seam's
-local stand-in (see [seams](seams.md)) and a planted lesson.
-
-## Target: session-derived identity, only
+`packages/auth/` resolves the current user from a database session through
+`currentUserId()`; it throws `UnauthenticatedError` when there is none. The
+behavior is specified in [sign-in](auth/sign-in.md).
 
 - Auth.js v5 + Prisma adapter, database sessions, GitHub OAuth (one provider).
 - Public surface: landing, /login, /api/health, /api/auth/*. Everything else
@@ -21,15 +18,16 @@ local stand-in (see [seams](seams.md)) and a planted lesson.
   id — no header, no param, no dev-only bypass: dev signs in like prod.
 - First sign-in creates the user (name/avatar from GitHub).
 
-The swap from stub to sessions is epic work — a `sign-in` ticket in the
-app's feature epic executes it against this contract.
-
 ## Constraints & decisions
 
 - One provider (GitHub); more is out of scope.
-- After the swap, the string `x-user-id` appears nowhere in the codebase.
+- No client-supplied identity input (header, param, env fallback) exists
+  anywhere in code or living docs.
 - Roles/admin, account deletion + export: future work with a privacy doc.
 
 ## Key decisions
 
-- [ADR-0003](../adr/0003-dev-identity-stub.md) — why the stub exists and how it's guarded.
+- [ADR-0012](../adr/0012-github-sessions-replace-dev-identity.md) — Auth.js
+  database sessions with GitHub only.
+- [ADR-0003](../adr/0003-dev-identity-stub.md) — superseded: the dev identity
+  stub this replaced.

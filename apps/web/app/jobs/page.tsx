@@ -1,7 +1,7 @@
 // The current user's jobs, newest applied first (docs/specs/jobs/list.md).
 import Link from "next/link";
-import { currentUserId } from "@project/auth";
 import { listJobs } from "@project/domain";
+import { requireUserId } from "../../lib/require-user";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ const addLink = (
 );
 
 export default async function JobsPage() {
-  const userId = await currentUserId();
+  const userId = await requireUserId("/jobs");
   const jobs = await listJobs(userId);
 
   return (

@@ -28,6 +28,23 @@ data in `.azurite/`).
 Check it worked: `http://localhost:3000/api/health`
 says `{"status":"ok","db":"ok"}`.
 
+## Sign in with GitHub (one-time setup)
+
+The app has no dev bypass: you sign in through a GitHub OAuth app, locally and
+in production.
+
+1. GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
+   Homepage `http://localhost:3000`; callback URL
+   `http://localhost:3000/api/auth/callback/github`.
+2. Put the app's credentials in `apps/web/.env.local` (never committed):
+   `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, and `AUTH_SECRET` (from
+   `openssl rand -base64 33`). `.env.example` lists them.
+3. `pnpm dev`, open `http://localhost:3000/login`, sign in, then `pnpm db:seed`
+   to give your user starter jobs.
+
+Without these variables `/` and `/api/health` still work; sign-in reports a
+configuration error. See `docs/specs/auth/sign-in.md`.
+
 ## The map
 
 ```
@@ -55,7 +72,7 @@ packages/                       # shared libraries
 ├── services/                   #   Azure adapters (queue, storage, notify)
 ├── domain/                     #   Zod schemas + queries (web-only)
 ├── log/                        #   pino logger
-└── auth/                       #   dev identity stub (real auth in Week 8)
+└── auth/                       #   Auth.js sessions + currentUserId()
 ```
 
 **Apps** are deployable. **Packages** are shared — no app imports from another app.

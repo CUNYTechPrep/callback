@@ -12,16 +12,22 @@ Pages live under `app/`, route handlers under `app/api/`:
 | Route | Method | Purpose |
 |---|---|---|
 | `/` | GET | Landing page — links to the job list |
-| `/jobs` | GET | The current user's jobs, newest applied first |
-| `/jobs/new` | GET | Add-a-job form; submits via a Server Action |
+| `/login` | GET | "Sign in with GitHub" |
+| `/jobs` | GET | The current user's jobs, newest applied first (signed in) |
+| `/jobs/new` | GET | Add-a-job form; submits via a Server Action (signed in) |
+| `/api/auth/*` | GET, POST | Auth.js handlers (sign-in, callback, sign-out) |
 | `/api/health` | GET | Health check — is the process alive? Can it reach the DB? |
+
+Everything except `/`, `/login`, `/api/health`, and `/api/auth/*` requires a
+session; `middleware.ts` redirects on cookie presence and `currentUserId()` is
+the real gate (see `docs/specs/auth/sign-in.md`).
 
 ## Dependencies
 
 - `@project/db` — the Prisma client and generated types
 - `@project/services` — queue, storage, and notify adapters
 - `@project/domain` — Zod schemas and database queries
-- `@project/auth` — the `currentUserId()` dev identity stub
+- `@project/auth` — Auth.js sessions and `currentUserId()`
 - `@project/log` — pino logger
 
 ## Consumers
@@ -37,6 +43,9 @@ pnpm dev:web     # starts the Next.js dev server
 The dev server expects a Postgres server and Azurite running alongside it.
 Start everything together with `pnpm dev` from the repo root. The dev server
 uses Turbopack (`--turbopack`).
+
+Sign-in needs `AUTH_SECRET`, `AUTH_GITHUB_ID`, and `AUTH_GITHUB_SECRET` in
+`apps/web/.env.local` (see the root README).
 
 ## When it changes
 

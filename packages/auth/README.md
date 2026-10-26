@@ -1,8 +1,9 @@
 # @project/auth — identity / auth
 
-The "who is the current user?" logic. Currently a deliberately naive dev stub.
-In Week 8 it's replaced with real authentication shared across the web app
-and the worker.
+The "who is the current user?" logic: Auth.js v5 with GitHub and database
+sessions. Identity comes from the `Session` row only — never from a client-supplied
+header, param, or env var. Contract: `docs/specs/auth.md`; behavior:
+`docs/specs/auth/sign-in.md`.
 
 ## Public API
 
@@ -10,30 +11,34 @@ All exports come from `src/index.ts`:
 
 | Export | What it does |
 |---|---|
-| `currentUserId()` | Returns the current user's ID. Reads from `x-user-id` request header, then `DEV_USER_ID` env var, then falls back to `demo-user`. |
+| `currentUserId()` | Returns the signed-in user's ID from an unexpired database session. Throws `UnauthenticatedError` when there is none. |
+| `UnauthenticatedError` | The thrown error (`code: "UNAUTHENTICATED"`); `apps/web` maps it to 401. |
+| `safeCallbackUrl(raw)` | Returns `raw` only if it is a same-origin path, else `/jobs`. |
+| `handlers`, `auth`, `signIn`, `signOut` | The Auth.js exports, mounted by `apps/web`. |
+
+## Files
+
+`errors.ts`, `redirect.ts`, `config.ts` (env check), `auth.ts` (Auth.js
+config), `link-guard.ts` (refuses email-based account linking), `current-user.ts`.
 
 ## Dependencies
 
-- `next` — for `next/headers` (the dev stub reads the HTTP request's headers)
+- `next-auth` (`5.0.0-beta.32`) and `@auth/prisma-adapter` (`2.11.3`), pinned exactly
+- `@project/db` — the Prisma client the adapter uses
+- `@project/log` — logs a configuration error when `AUTH_*` is missing
 
 ## Consumers
 
-- `apps/web` — via `@project/auth`
+- `apps/web` — via `@project/auth`. The worker has no user context and does
+  not import it.
 
-## The dev stub
+## Configuration
 
-```ts
-currentUserId()
-  1. x-user-id request header (if present)
-  2. DEV_USER_ID env var (if set)
-  3. "demo-user" (created by the seed script)
-```
+`AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, read by Next from
+`apps/web/.env.local`. Missing values log a configuration error and make
+sign-in fail; they do not break `/api/health`. Setup is in the root README.
 
-In development, this trusts the client to say who they are. That's intentional.
-Week 8 replaces it with real auth (OAuth, JWTs, middleware) that works for both
-the web app and the worker.
+## Testing
 
-## Disabled in production
-
-The dev stub throws if `NODE_ENV === "production"` unless `ALLOW_DEV_IDENTITY` is
-set. Real auth in Week 8 removes this guard.
+Tests mock `@project/auth` at the package seam (`currentUserId`); there is no
+dev bypass. See `tests/integration/auth-*.test.ts`.

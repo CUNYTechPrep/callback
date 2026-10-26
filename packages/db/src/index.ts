@@ -7,6 +7,8 @@ export type {
   Job,
   JobEvent,
   User,
+  Account,
+  Session,
   JobStatus,
   JobSource,
   JobEventType,
