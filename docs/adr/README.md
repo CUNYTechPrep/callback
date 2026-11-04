@@ -20,3 +20,4 @@ that supersedes the old one.
 | 0010 | [Reviewer-agent lifecycle and authority](0010-reviewer-agent-lifecycle.md) | Accepted |
 | 0011 | [Ideation pipeline + @research subagent](0011-ideation-pipeline.md) | Accepted |
 | 0012 | [GitHub database sessions replace the dev identity stub](0012-github-sessions-replace-dev-identity.md) | Accepted |
+| 0013 | [Migrations run at container start, not from CI](0013-migrate-on-container-start.md) | Accepted |
