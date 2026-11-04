@@ -1,8 +1,10 @@
 # Deploy — every push to main ships itself (docs/specs/deploy.md).
-# Build the image once → push it to GHCR → start a new Container Apps
-# revision at 0% traffic → smoke-test its /api/health → move traffic to it.
-# If the smoke test fails, traffic never moves and the new revision is
-# switched off. One-time setup: docs/runbooks/provision-production.md.
+# Build the image once and push it to GHCR → run the migrate job on it
+# (ADR-0015) → start a new Container Apps revision from it
+# (azure/container-apps-deploy-action). The platform moves traffic to the
+# revision only after its readiness probe on /api/health passes (ADR-0014);
+# this workflow waits for that and goes red if it never happens.
+# One-time setup: docs/runbooks/provision-production.md.
 
 name: Deploy
 
@@ -23,6 +25,7 @@ permissions:
 
 env:
   APP: ${{ vars.AZURE_CONTAINERAPP }}
+  JOB: ${{ vars.AZURE_CONTAINERAPP }}-migrate
   RG: ${{ vars.AZURE_RESOURCE_GROUP }}
 
 jobs:
@@ -31,13 +34,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Name the image and the revision
+      - name: Name the image
+        # GHCR wants lowercase; CUNYTechPrep isn't.
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/web:$GITHUB_SHA" >> "$GITHUB_ENV"
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Refuse to deploy without the readiness gate or the migrate job
         run: |
-          # GHCR wants lowercase; CUNYTechPrep isn't.
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/web:$GITHUB_SHA" >> "$GITHUB_ENV"
-          # Revision suffixes start with a letter and never repeat; the run
-          # number keeps a re-run of the same commit from colliding.
-          echo "SUFFIX=r$GITHUB_RUN_NUMBER-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          # Without single-revision mode and a readiness probe, a new
+          # revision could take traffic (or be declared live) before it
+          # can reach the database. Without the job, nothing migrates.
+          # See the provisioning runbook.
+          mode=$(az containerapp show -n "$APP" -g "$RG" \
+            --query properties.configuration.activeRevisionsMode -o tsv)
+          probes=$(az containerapp show -n "$APP" -g "$RG" \
+            --query "length(properties.template.containers[0].probes[?type=='Readiness'] || \`[]\`)" -o tsv)
+          if [ "$mode" != "Single" ] || [ "$probes" = "0" ]; then
+            echo "::error::Need single-revision mode and a readiness probe (mode=$mode, readiness probes=$probes). See docs/runbooks/provision-production.md."
+            exit 1
+          fi
+          if ! az containerapp job show -n "$JOB" -g "$RG" -o none; then
+            echo "::error::Migrate job $JOB not found. See docs/runbooks/provision-production.md."
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
@@ -57,50 +81,57 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - uses: azure/login@v2
+      - name: Migrate
+        run: |
+          # Same image, the job's own command (the migrator). If this fails,
+          # no revision is created and the old code keeps serving.
+          az containerapp job update -n "$JOB" -g "$RG" --image "$IMAGE" -o none
+          run=$(az containerapp job start -n "$JOB" -g "$RG" --query name -o tsv)
+          echo "Execution: $run"
+          for _ in $(seq 60); do
+            status=$(az containerapp job execution show -n "$JOB" -g "$RG" \
+              --job-execution-name "$run" --query properties.status -o tsv)
+            case "$status" in
+              Succeeded) exit 0 ;;
+              Failed|Stopped|Degraded) break ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Migration $run ended $status; nothing was deployed. Logs: az containerapp job logs show -n $JOB -g $RG --execution $run --container $JOB"
+          echo "Not deployed: migration \`$run\` ended \`$status\`." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      # The image is already in GHCR, so the action only deploys. No registry
+      # credentials: the action would store them on the app, and
+      # GITHUB_TOKEN expires when this job ends. The package is public.
+      - name: Start a new revision
+        uses: azure/container-apps-deploy-action@v2
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          imageToDeploy: ${{ env.IMAGE }}
+          containerAppName: ${{ env.APP }}
+          resourceGroup: ${{ env.RG }}
+          disableTelemetry: true
+          # No ingress/targetPort: the action then runs a plain
+          # `containerapp update`, which keeps the probes and revision mode.
 
-      - name: Refuse to deploy if new revisions get traffic automatically
+      - name: Wait for the platform to move traffic to it
         run: |
-          # With traffic on "latest revision", the new one would be live
-          # before the smoke test runs. Traffic must be pinned to a named
-          # revision (see the provisioning runbook).
-          auto=$(az containerapp ingress traffic show -n "$APP" -g "$RG" \
-            --query "[?latestRevision] | length(@)" -o tsv)
-          if [ "$auto" != "0" ]; then
-            echo "::error::Traffic follows the latest revision. Pin it first: az containerapp ingress traffic set -n $APP -g $RG --revision-weight <current-revision>=100"
-            exit 1
-          fi
-
-      - name: New revision at 0% traffic
-        id: revision
-        run: |
-          az containerapp update -n "$APP" -g "$RG" \
-            --image "$IMAGE" --revision-suffix "$SUFFIX" -o none
-          echo "REVISION=$APP--$SUFFIX" >> "$GITHUB_ENV"
-
-      - name: Smoke-test the new revision
-        run: |
-          fqdn=$(az containerapp revision show -n "$APP" -g "$RG" \
-            --revision "$REVISION" --query properties.fqdn -o tsv)
-          # The revision wakes from zero and runs migrations first, so give
-          # it about two minutes to answer before calling it broken.
-          body=$(curl -fsS --retry 12 --retry-delay 10 --retry-all-errors \
-            --max-time 30 "https://$fqdn/api/health")
-          echo "$body"
-          echo "$body" | grep -q '"db":"ok"'
-
-      - name: Move traffic to the new revision
-        run: |
-          az containerapp ingress traffic set -n "$APP" -g "$RG" \
-            --revision-weight "$REVISION=100" -o none
-          echo "Live: \`$REVISION\` serving \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Switch off the failed revision
-        if: failure() && steps.revision.outcome == 'success'
-        run: |
-          az containerapp revision deactivate -n "$APP" -g "$RG" --revision "$REVISION"
-          echo "Smoke test failed: \`$REVISION\` was switched off and never took traffic." >> "$GITHUB_STEP_SUMMARY"
+          rev=$(az containerapp show -n "$APP" -g "$RG" \
+            --query properties.latestRevisionName -o tsv)
+          # The revision may be waking from zero; give it about five minutes
+          # to pass its readiness probe.
+          for _ in $(seq 30); do
+            ready=$(az containerapp show -n "$APP" -g "$RG" \
+              --query properties.latestReadyRevisionName -o tsv)
+            if [ "$ready" = "$rev" ]; then
+              echo "Live: \`$rev\` serving \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            state=$(az containerapp revision show -n "$APP" -g "$RG" \
+              --revision "$rev" --query properties.provisioningState -o tsv)
+            [ "$state" = "Failed" ] && break
+            sleep 10
+          done
+          echo "::error::$rev never became ready; the previous revision is still serving. Logs: az containerapp logs show -n $APP -g $RG --revision $rev"
+          echo "Not live: \`$rev\` never passed its readiness probe; the previous revision kept traffic." >> "$GITHUB_STEP_SUMMARY"
+          exit 1

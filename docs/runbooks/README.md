@@ -32,4 +32,4 @@ Start from [`_template.md`](_template.md).
 | Runbook | When |
 |---|---|
 | [provision-production](provision-production.md) | Standing up production from nothing: first deploy, or a rebuild after losing the resource group |
-| [rollback-bad-deploy](rollback-bad-deploy.md) | A deploy passed its smoke test, took traffic, and broke something |
+| [rollback-bad-deploy](rollback-bad-deploy.md) | A deploy passed its readiness probe, took traffic, and broke something |

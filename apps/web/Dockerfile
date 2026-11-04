@@ -32,8 +32,8 @@ COPY --from=build --chown=node:node /app ./
 USER node
 EXPOSE 3000
 
-# Migrate, then serve. Migrations run here, inside Azure, because the
-# Postgres firewall admits Azure services and not GitHub's runners. A failed
-# migration exits non-zero, the server never starts, the smoke test fails,
-# and traffic stays on the old revision. `exec` hands signals to Next.
-CMD ["sh", "-c", "cd apps/migrate && ./node_modules/.bin/tsx src/index.ts && cd ../web && exec ./node_modules/.bin/next start"]
+# Serve only. Migrations run before the deploy, in a Container Apps Job that
+# starts this same image with the migrator as its command (ADR-0015):
+#   /app/apps/migrate/node_modules/.bin/tsx /app/apps/migrate/src/index.ts
+# `exec` hands signals to Next.
+CMD ["sh", "-c", "cd apps/web && exec ./node_modules/.bin/next start"]
