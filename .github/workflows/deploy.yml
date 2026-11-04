@@ -1,0 +1,106 @@
+# Deploy — every push to main ships itself (docs/specs/deploy.md).
+# Build the image once → push it to GHCR → start a new Container Apps
+# revision at 0% traffic → smoke-test its /api/health → move traffic to it.
+# If the smoke test fails, traffic never moves and the new revision is
+# switched off. One-time setup: docs/runbooks/provision-production.md.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Two merges in a row deploy one after the other, never on top of each other.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write # push to GHCR
+  id-token: write # sign in to Azure with OIDC, no stored password
+
+env:
+  APP: ${{ vars.AZURE_CONTAINERAPP }}
+  RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Name the image and the revision
+        run: |
+          # GHCR wants lowercase; CUNYTechPrep isn't.
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/web:$GITHUB_SHA" >> "$GITHUB_ENV"
+          # Revision suffixes start with a letter and never repeat; the run
+          # number keeps a re-run of the same commit from colliding.
+          echo "SUFFIX=r$GITHUB_RUN_NUMBER-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (the only place images are built)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Refuse to deploy if new revisions get traffic automatically
+        run: |
+          # With traffic on "latest revision", the new one would be live
+          # before the smoke test runs. Traffic must be pinned to a named
+          # revision (see the provisioning runbook).
+          auto=$(az containerapp ingress traffic show -n "$APP" -g "$RG" \
+            --query "[?latestRevision] | length(@)" -o tsv)
+          if [ "$auto" != "0" ]; then
+            echo "::error::Traffic follows the latest revision. Pin it first: az containerapp ingress traffic set -n $APP -g $RG --revision-weight <current-revision>=100"
+            exit 1
+          fi
+
+      - name: New revision at 0% traffic
+        id: revision
+        run: |
+          az containerapp update -n "$APP" -g "$RG" \
+            --image "$IMAGE" --revision-suffix "$SUFFIX" -o none
+          echo "REVISION=$APP--$SUFFIX" >> "$GITHUB_ENV"
+
+      - name: Smoke-test the new revision
+        run: |
+          fqdn=$(az containerapp revision show -n "$APP" -g "$RG" \
+            --revision "$REVISION" --query properties.fqdn -o tsv)
+          # The revision wakes from zero and runs migrations first, so give
+          # it about two minutes to answer before calling it broken.
+          body=$(curl -fsS --retry 12 --retry-delay 10 --retry-all-errors \
+            --max-time 30 "https://$fqdn/api/health")
+          echo "$body"
+          echo "$body" | grep -q '"db":"ok"'
+
+      - name: Move traffic to the new revision
+        run: |
+          az containerapp ingress traffic set -n "$APP" -g "$RG" \
+            --revision-weight "$REVISION=100" -o none
+          echo "Live: \`$REVISION\` serving \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Switch off the failed revision
+        if: failure() && steps.revision.outcome == 'success'
+        run: |
+          az containerapp revision deactivate -n "$APP" -g "$RG" --revision "$REVISION"
+          echo "Smoke test failed: \`$REVISION\` was switched off and never took traffic." >> "$GITHUB_STEP_SUMMARY"
