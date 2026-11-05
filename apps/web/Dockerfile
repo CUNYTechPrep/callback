@@ -33,7 +33,7 @@ USER node
 EXPOSE 3000
 
 # Serve only. Migrations run before the deploy, in a Container Apps Job that
-# starts this same image with the migrator as its command (ADR-0015):
+# starts this same image with the migrator as its command (ADR-0014):
 #   /app/apps/migrate/node_modules/.bin/tsx /app/apps/migrate/src/index.ts
 WORKDIR /app/apps/web
 CMD ["./node_modules/.bin/next", "start"]

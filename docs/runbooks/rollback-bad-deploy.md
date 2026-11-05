@@ -54,5 +54,5 @@ didn't.
 ## Related
 
 - Spec of the system being operated on: `docs/specs/deploy.md`
-- Why migrations don't roll back: `docs/adr/0015-migrate-in-a-container-apps-job.md`
-- Why rollback is a redeploy: `docs/adr/0014-readiness-probe-gates-traffic.md`
+- Why migrations don't roll back: `docs/adr/0014-migrate-in-a-container-apps-job.md`
+- Why rollback is a redeploy: `docs/adr/0013-readiness-probe-gates-traffic.md`

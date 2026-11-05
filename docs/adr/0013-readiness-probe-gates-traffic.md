@@ -1,4 +1,4 @@
-# ADR-0014: The platform's readiness probe decides when a revision gets traffic
+# ADR-0013: The platform's readiness probe decides when a revision gets traffic
 
 ## Status
 
@@ -27,8 +27,7 @@ readiness probe unchanged.
 
 The app runs in **single-revision mode** with a **readiness probe** on
 `GET /api/health` (HTTP, 503 = not ready). The probe's failure threshold
-leaves room for a cold start plus migrations (ADR-0013), about two
-minutes. The deploy workflow is checkout → Azure login → GHCR login →
+leaves room for a cold start, about two minutes. The deploy workflow is checkout → Azure login → GHCR login →
 `azure/container-apps-deploy-action`. It has no smoke test, no traffic
 step and no pin check. A liveness probe on the same path restarts a
 replica that later loses the database.
@@ -72,4 +71,3 @@ be worth it if we wanted to test a revision by hand before promoting it.
 - `docs/specs/deploy.md` — the deploy contract this would change.
 - `docs/runbooks/provision-production.md` — sets `--revisions-mode multiple` and pins traffic today.
 - `docs/runbooks/rollback-bad-deploy.md` — would become a redeploy-previous-image procedure.
-- ADR-0013 — why a cold start takes a while (migrations run first).

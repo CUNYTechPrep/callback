@@ -64,7 +64,7 @@ rebuild after the resource group is gone.
        AUTH_TRUST_HOST=true PG_POOL_MAX=1 LOG_LEVEL=info
    ```
 8. Add the readiness and liveness probes. From now on a new revision gets
-   traffic only after `/api/health` answers 200 (ADR-0014). The `set-mode`
+   traffic only after `/api/health` answers 200 (ADR-0013). The `set-mode`
    line also converts an older app that still runs in multiple-revision
    mode.
    ```bash
@@ -83,7 +83,7 @@ rebuild after the resource group is gone.
    Check: `az containerapp show -n "$APP" -g "$RG" --query "properties.template.containers[0].probes[].type"`
    lists `Readiness` and `Liveness`.
 9. Create the migrate job. The workflow points it at each new image and
-   runs it before deploying (ADR-0015). Its name must be `$APP-migrate`.
+   runs it before deploying (ADR-0014). Its name must be `$APP-migrate`.
    ```bash
    az containerapp job create -n "$APP-migrate" -g "$RG" --environment "$ENV" \
      --trigger-type Manual --replica-timeout 1800 --replica-retry-limit 0 \

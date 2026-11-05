@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the migrate job on $IMAGE and wait for it to finish (ADR-0015).
+# Run the migrate job on $IMAGE and wait for it to finish (ADR-0014).
 # Needs: JOB, RG, IMAGE, and a signed-in az. Exits non-zero unless the
 # execution Succeeded; the caller bounds the total wait (timeout-minutes).
 set -euo pipefail

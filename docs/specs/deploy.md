@@ -63,7 +63,7 @@ Shipping is a merge, not a ritual performed by someone who remembers the steps.
   waits to become ready, and after any rollback, the *old* code runs against
   the *new* schema.
 - The platform gates traffic, not the workflow; rollback is redeploying the
-  previous image, not moving traffic. See ADR-0014.
+  previous image, not moving traffic. See ADR-0013.
 - The worker deploys separately (as a Functions timer when precomputation
   arrives — an epic ticket, not part of the base deploy).
 - Standing up production from nothing is
@@ -79,9 +79,9 @@ Shipping is a merge, not a ritual performed by someone who remembers the steps.
 
 ## Key ADRs
 
-- [ADR-0014](../adr/0014-readiness-probe-gates-traffic.md) — the readiness
+- [ADR-0013](../adr/0013-readiness-probe-gates-traffic.md) — the readiness
   probe, not the workflow, decides when a revision gets traffic.
-- [ADR-0015](../adr/0015-migrate-in-a-container-apps-job.md) — migrations
-  run in a Container Apps Job before each deploy (supersedes ADR-0013).
+- [ADR-0014](../adr/0014-migrate-in-a-container-apps-job.md) — migrations
+  run in a Container Apps Job before each deploy.
 - [ADR-0008](../adr/0008-azurite-seam.md) — the same code talks to local
   stand-ins or Azure by env var alone.

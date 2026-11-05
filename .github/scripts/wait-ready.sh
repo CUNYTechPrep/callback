@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Wait until the app's latest revision is its latest *ready* revision, i.e.
-# the platform has moved traffic to it (ADR-0014). Needs: APP, RG, and a
+# the platform has moved traffic to it (ADR-0013). Needs: APP, RG, and a
 # signed-in az. Exits non-zero if that hasn't happened within ~5 minutes.
 set -euo pipefail
 

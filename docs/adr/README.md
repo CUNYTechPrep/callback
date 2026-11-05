@@ -20,6 +20,5 @@ that supersedes the old one.
 | 0010 | [Reviewer-agent lifecycle and authority](0010-reviewer-agent-lifecycle.md) | Accepted |
 | 0011 | [Ideation pipeline + @research subagent](0011-ideation-pipeline.md) | Accepted |
 | 0012 | [GitHub database sessions replace the dev identity stub](0012-github-sessions-replace-dev-identity.md) | Accepted |
-| 0013 | [Migrations run at container start, not from CI](0013-migrate-on-container-start.md) | Superseded by 0015 |
-| 0014 | [The platform's readiness probe decides when a revision gets traffic](0014-readiness-probe-gates-traffic.md) | Accepted |
-| 0015 | [Migrations run in a Container Apps Job before each deploy](0015-migrate-in-a-container-apps-job.md) | Accepted |
+| 0013 | [The platform's readiness probe decides when a revision gets traffic](0013-readiness-probe-gates-traffic.md) | Accepted |
+| 0014 | [Migrations run in a Container Apps Job before each deploy](0014-migrate-in-a-container-apps-job.md) | Accepted |

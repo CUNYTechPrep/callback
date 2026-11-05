@@ -1,8 +1,8 @@
 # Deploy — every push to main ships itself (docs/specs/deploy.md).
 # Build the image once and push it to GHCR → run the migrate job on it
-# (ADR-0015) → start a new Container Apps revision from it
+# (ADR-0014) → start a new Container Apps revision from it
 # (azure/container-apps-deploy-action). The platform moves traffic to the
-# revision only after its readiness probe on /api/health passes (ADR-0014);
+# revision only after its readiness probe on /api/health passes (ADR-0013);
 # this workflow waits for that and goes red if it never happens.
 # The polling lives in .github/scripts/.
 # One-time setup: docs/runbooks/provision-production.md.
