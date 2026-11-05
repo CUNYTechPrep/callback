@@ -54,6 +54,8 @@ Shipping is a merge, not a ritual performed by someone who remembers the steps.
 - Container Apps consumption, min replicas 0 (scale-to-zero is the default
   posture), max replicas 1; anything needing always-on gets its own
   discussion.
+- The workflow's multi-line steps live in `.github/scripts/` (`migrate.sh`,
+  `wait-ready.sh`), runnable by hand after `az login` with the same env vars.
 - Azure access from Actions is OIDC (federated credential on `main`), never
   a stored password.
 - Migrations are expand-only: add tables, columns, and indexes; never drop
