@@ -32,7 +32,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Test
-        run: exit 1
+        run: pnpm test
 
       - name: Build
         run: pnpm build
