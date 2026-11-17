@@ -18,7 +18,13 @@ allowBuilds:
   "@prisma/engines": true
   "esbuild": true
   "prisma": true
+  # Pulled in by OpenTelemetry. Its install script is optional, so say no
+  # explicitly: pnpm treats an unanswered build script as an error.
+  "protobufjs": false
   "sharp": true
 
 overrides:
   "pglite-prisma-adapter>@prisma/driver-adapter-utils": 6.19.3
+  # OpenTelemetry's Postgres instrumentation pins its own copy of these types;
+  # two copies make `new PrismaPg(pool)` fail to typecheck.
+  "@types/pg": 8.15.6
